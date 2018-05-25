@@ -1,4 +1,4 @@
-import java.util.ArrayList;
+import java.util.List;
 
 public class Wad {
 
@@ -11,17 +11,17 @@ public class Wad {
     }
 
     private String wadType;
-    private ArrayList<Level> levels;
+    private List<Level> levels;
 
-    public ArrayList<Level> getLevels() {
+    public List<Level> getLevels() {
         return levels;
     }
 
-    public void setLevels(ArrayList<Level> levels) {
+    public void setLevels(List<Level> levels) {
         this.levels = levels;
     }
 
-    public Wad(String wadType, ArrayList<Level> levels) {
+    public Wad(String wadType, List<Level> levels) {
         this.wadType = wadType;
         this.levels = levels;
     }

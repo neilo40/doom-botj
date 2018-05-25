@@ -73,4 +73,10 @@ public class Linedef {
         this.rightSideDef = rightSideDef;
         this.leftSideDef = leftSideDef;
     }
+
+    public Vertex midpoint() {
+        Double midX = a.getX() + (b.getX() - a.getX()) / 2;
+        Double midY = a.getY() + (b.getY() - a.getY()) / 2;
+        return new Vertex(midX, midY);
+    }
 }

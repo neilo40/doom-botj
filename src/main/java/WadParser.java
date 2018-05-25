@@ -20,6 +20,16 @@ public class WadParser {
     private static final Integer MAX_TRAVERSABLE_HEIGHT = 30;
     private static final List<Integer> LIFT_LINEDEF_TYPES = Arrays.asList(66, 15, 148, 143, 67, 14, 149, 144, 68, 20,
             95, 22, 47, 181, 162, 87, 53, 182, 163, 89, 54, 62, 21, 88, 10, 123, 122, 120, 121, 211, 212);
+    private static final List<Integer> NORMAL_EXIT_TYPES = Arrays.asList(11, 52, 197);
+    private static final List<Integer> SECRET_EXIT_TYPES = Arrays.asList(51, 124, 198);
+    private static final List<Integer> EXIT_TYPES = Stream.concat(NORMAL_EXIT_TYPES.stream(), SECRET_EXIT_TYPES.stream())
+            .collect(Collectors.toList());
+    private static final List<Integer> DOOR_SWITCH_TYPES = Arrays.asList(103);
+    private static final List<Integer> STAIRCASE_TYPES = Arrays.asList(258, 7, 256, 8, 259, 127, 257, 100);
+    private static final List<Integer> NON_EXIT_TYPES = Stream.concat(DOOR_SWITCH_TYPES.stream(), STAIRCASE_TYPES.stream())
+            .collect(Collectors.toList());
+    private static final List<Integer> SWITCH_TYPES = Stream.concat(EXIT_TYPES.stream(), NON_EXIT_TYPES.stream())
+            .collect(Collectors.toList());
 
     public Wad createWad(String fromFile) throws IOException {
         MappedByteBuffer byteStream = createStream(fromFile);
@@ -29,7 +39,7 @@ public class WadParser {
         List<Lump> lumps = extractLumps(byteStream, data);
         Stream<Level> levels = extractLevels(lumps)
                 .sorted(Comparator.comparing(Level::getName));
-        return new Wad(wadType, levels.collect(Collectors.toCollection(ArrayList::new)));
+        return new Wad(wadType, levels.collect(Collectors.toList()));
     }
 
     private MappedByteBuffer createStream(String fromFile) throws IOException {
@@ -125,7 +135,11 @@ public class WadParser {
         Stream<Linedef> linedefs = extractLinedefs(lumps.get("LINEDEFS"), vertices.collect(Collectors.toList()),
                 sidedefs.collect(Collectors.toList()));
         Stream<Thing> things = extractThings(lumps.get("THINGS"));
-        return new Level(name);
+        Vertex start = extractStart(things);
+        Vertex exit = extractExit(linedefs, start);
+        List<DoorSwitch> doorSwitches = extractDoorSwitches(linedefs);
+
+        return new Level(name, linedefs.collect(Collectors.toList()), start, exit, doorSwitches);
     }
 
     private Stream<Vertex> extractVertices(Lump lump) {
@@ -265,5 +279,25 @@ public class WadParser {
         Integer doomId = ByteBuffer.wrap(ArrayUtils.toPrimitive(doomIdBytes)).order(ByteOrder.LITTLE_ENDIAN).getInt();
 
         return new Thing(position, angle, doomId);
+    }
+
+    private Vertex extractStart(Stream<Thing> things) {
+        return things.filter(t -> t.getDoomId() == 1)
+                .findFirst()
+                .map(Thing::getPosition)
+                .orElse(null);
+    }
+
+    private Vertex extractExit(Stream<Linedef> linedefs, Vertex start) {
+        return linedefs.filter(l -> NORMAL_EXIT_TYPES.contains(l.getLineType()))
+                .findFirst()
+                .map(Linedef::midpoint)
+                .orElse(start);
+    }
+
+    private List<DoorSwitch> extractDoorSwitches(Stream<Linedef> linedefs) {
+        return linedefs.filter(l -> SWITCH_TYPES.contains(l.getLineType()))
+                .map(DoorSwitch::fromWadLine)
+                .collect(Collectors.toList());
     }
 }
